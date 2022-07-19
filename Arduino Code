@@ -1,0 +1,153 @@
+//IOT Based Flood Monitoring And Drainage System.
+#include<LiquidCrystal.h>
+LiquidCrystal lcd(2,3,4,5,6,7);
+
+#define trig_1 A1
+#define echo_1 A0
+#define trig_2 A3
+#define echo_2 A2
+#define trig_3 A5
+#define echo_3 A4
+
+
+const int motor_1_top=9;
+const int motor_1_bottom=8;
+const int motor_2_top=1;
+const int motor_2_bottom=0;
+const int green=10;
+const int orange=11;
+const int red=12;
+const int buzz=13;
+long dur,dist,per,FIRSTSensor,SECONDSensor;
+
+void setup(){
+	Serial.begin(9600);
+	lcd.begin(16,2);
+	pinMode(trig_1, OUTPUT);
+	pinMode(echo_1, INPUT);
+	pinMode(trig_2, OUTPUT);
+	pinMode(echo_2, INPUT);
+	pinMode(trig_3, OUTPUT);
+	pinMode(echo_3, INPUT);
+  
+	pinMode(green, OUTPUT);
+	pinMode(orange, OUTPUT);
+	pinMode(red, OUTPUT);
+	pinMode(buzz, OUTPUT);
+	digitalWrite(green,LOW);
+	digitalWrite(orange,LOW);
+	digitalWrite(red,LOW);
+	digitalWrite(buzz,LOW);
+  
+	pinMode(motor_1_top,OUTPUT);
+	pinMode(motor_1_bottom, OUTPUT);
+	pinMode(motor_2_top, OUTPUT);
+	pinMode(motor_2_bottom, OUTPUT);
+	
+  	lcd.setCursor(0,0);
+	lcd.print("Flood Monitoring");
+	lcd.setCursor(0,1);
+	lcd.print("Alerting System");
+	delay(5000);
+	lcd.clear();
+}
+
+void loop()
+{
+// for sensing water level at our village
+    SonarSensor(trig_3 , echo_3);
+
+//water level in percentage 
+	per=map(dist,2,30,0,100);
+	if(per<0)
+	{
+	  per=0;
+	}
+	else if(per>100)
+	{
+ 	 per=100;
+	}
+
+//other two village water level
+	SonarSensor(trig_1 , echo_1);
+	FIRSTSensor =dist;
+	SonarSensor(trig_2 , echo_2);
+	SECONDSensor = dist;
+  
+  
+	Serial.println(String(dist));
+	lcd.setCursor(0,0);
+	lcd.print("Water Level:");
+	lcd.print(String(per));
+	lcd.print("%  ");
+  
+	if(per<=40)       
+	{
+  		lcd.setCursor(0,1);
+  		lcd.print("Red Alert!   ");
+  		digitalWrite(red,HIGH);
+ 		digitalWrite(green,LOW);
+  		digitalWrite(orange,LOW);
+      
+      // for running the mortor
+      	digitalWrite(motor_1_top, LOW);
+		digitalWrite(motor_2_top, LOW);
+    	if(FIRSTSensor >= SECONDSensor ){
+  			Serial.println("---PUMP 1 ON---transfering to village 1");// pump 1 on
+  			digitalWrite(motor_1_bottom,HIGH); 
+  			digitalWrite(motor_2_bottom,LOW);
+		}else{
+		  	Serial.println("---PUMP 2 ON---transfering to village 2");// pump 2 on
+  			digitalWrite(motor_1_bottom,LOW);
+  			digitalWrite(motor_2_bottom,HIGH);
+			}
+      // buzzer on
+  		digitalWrite(buzz,HIGH);
+  		delay(200);
+  		digitalWrite(buzz,LOW);
+  		delay(200);
+  		digitalWrite(buzz,HIGH);
+  		delay(200);
+  		digitalWrite(buzz,LOW);
+  		delay(200);
+      
+      
+	}
+	else if(per>=40 && per<=70 )   
+	{	
+  		lcd.setCursor(0,1);
+  		lcd.print("Orange Alert!  ");
+  		digitalWrite(orange,HIGH);
+  		digitalWrite(red,LOW);
+  		digitalWrite(green,LOW);
+  		digitalWrite(buzz,HIGH);
+  		delay(1000);
+  		digitalWrite(buzz,LOW);
+  		delay(1000);
+  
+	}else          
+	{
+ 		lcd.setCursor(0,1);
+ 		lcd.print("Green Alert!  ");
+ 		digitalWrite(green,HIGH); 
+ 		digitalWrite(orange,LOW);
+ 		digitalWrite(red,LOW);
+ 		digitalWrite(buzz,LOW);
+	}
+
+	// delay(2000);
+}
+
+
+// height of water
+void SonarSensor (int out , int in){
+  	long per;
+	digitalWrite(out,LOW);
+	delayMicroseconds(2);
+	digitalWrite(out,HIGH);
+	delayMicroseconds(10);
+	digitalWrite(out,LOW);
+	dur = pulseIn(in,HIGH);
+	dist=(dur*0.0034)/2;
+
+}
